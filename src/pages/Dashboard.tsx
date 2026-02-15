@@ -82,6 +82,8 @@ const mockLeads: Lead[] = [
 ];
 
 export const Dashboard = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,8 +93,31 @@ export const Dashboard = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   useEffect(() => {
-    fetchLeads();
+    const auth = localStorage.getItem('holmes_admin_auth');
+    if (auth === 'true') {
+      setIsAuthenticated(true);
+      fetchLeads();
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === 'holmes##11$$acac(#$_!@h32') {
+      setIsAuthenticated(true);
+      localStorage.setItem('holmes_admin_auth', 'true');
+      fetchLeads();
+    } else {
+      alert('كلمة المرور غير صحيحة');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('holmes_admin_auth');
+    setPasswordInput('');
+  };
 
   useEffect(() => {
     filterData();
@@ -126,6 +151,35 @@ export const Dashboard = () => {
       setLeads(mockLeads);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateLeadStatus = async (id: number, newStatus: 'read' | 'contacted') => {
+    try {
+      // Optimistic UI update
+      setLeads(prev => prev.map(lead => 
+        lead.id === id ? { ...lead, status: newStatus } : lead
+      ));
+
+      if (selectedLead && selectedLead.id === id) {
+        setSelectedLead(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+
+      const { error } = await supabase
+        .from('leads')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
+  const handleRowClick = (lead: Lead) => {
+    setSelectedLead(lead);
+    if (lead.status === 'new') {
+      updateLeadStatus(lead.id, 'read');
     }
   };
 
@@ -201,6 +255,42 @@ export const Dashboard = () => {
     return labels[interest] || interest;
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="glass-card max-w-md w-full p-8 rounded-2xl border border-white/10">
+          <div className="text-center mb-8">
+            <Zap className="w-12 h-12 text-neon mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-white">تسجيل دخول المشرف</h1>
+            <p className="text-gray-400 mt-2">يرجى إدخال رمز الدخول للوصول للوحة التحكم</p>
+          </div>
+          
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="رمز الدخول..."
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-neon outline-none text-white transition-colors"
+                autoFocus
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-3 bg-neon text-black font-bold rounded-lg hover:bg-neon/90 transition-colors"
+            >
+              دخول
+            </button>
+            <Link to="/" className="block text-center text-gray-500 hover:text-white text-sm">
+              العودة للموقع
+            </Link>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white font-cairo flex flex-col md:flex-row">
       
@@ -225,10 +315,17 @@ export const Dashboard = () => {
           </button>
         </nav>
 
-        <div className="p-4 border-t border-white/10">
-          <Link to="/" className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-white rounded-lg transition-all"
+          >
             <LogOut size={20} />
-            <span>الخروج للموقع</span>
+            <span>تسجيل الخروج</span>
+          </button>
+          
+          <Link to="/" className="w-full flex items-center gap-3 px-4 py-3 text-neon hover:bg-neon/10 rounded-lg transition-all border border-neon/20 justify-center">
+            <span>العودة للموقع</span>
           </Link>
         </div>
       </aside>
@@ -332,7 +429,7 @@ export const Dashboard = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="hover:bg-white/5 transition-colors group cursor-pointer"
-                        onClick={() => setSelectedLead(lead)}
+                        onClick={() => handleRowClick(lead)}
                       >
                         <td className="p-4">
                           <div className="font-bold text-white">{lead.full_name}</div>
@@ -439,13 +536,33 @@ export const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-white/10 justify-end">
+                <div className="flex gap-3 pt-4 border-t border-white/10 flex-wrap justify-end">
+                  <a 
+                    href={`https://mail.google.com/mail/?view=cm&fs=1&to=${selectedLead.email}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-3 bg-neon text-black font-bold rounded-lg hover:bg-neon/90 transition-colors flex items-center gap-2"
+                  >
+                    <Mail size={20} />
+                    مراسلة (Gmail)
+                  </a>
+                  
+                  {selectedLead.status !== 'contacted' && (
+                    <button 
+                      onClick={() => updateLeadStatus(selectedLead.id, 'contacted')}
+                      className="px-4 py-3 bg-green-500/10 hover:bg-green-500/20 text-green-400 font-bold rounded-lg transition-colors flex items-center gap-2 border border-green-500/20"
+                    >
+                      <Zap size={20} />
+                      تم التواصل
+                    </button>
+                  )}
+
                   <button 
                     onClick={() => handleDelete(selectedLead.id)}
-                    className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-lg transition-colors flex items-center gap-2"
+                    className="px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-lg transition-colors flex items-center gap-2 border border-red-500/20"
                   >
                     <Trash2 size={20} />
-                    حذف الطلب
+                    حذف
                   </button>
                 </div>
               </div>
