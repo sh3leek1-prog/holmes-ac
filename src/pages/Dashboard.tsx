@@ -95,7 +95,7 @@ export const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching leads:', error);
       // Fallback to mock data on error
-      setLeads();
+      setLeads([]);
     } finally {
       setLoading(false);
     }
