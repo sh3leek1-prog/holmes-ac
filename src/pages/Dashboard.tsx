@@ -28,58 +28,6 @@ type Lead = {
   status: 'new' | 'read' | 'contacted';
 };
 
-const mockLeads: Lead[] = [
-  {
-    id: 1,
-    full_name: 'أحمد محمد',
-    email: 'ahmed@example.com',
-    phone: '0501234567',
-    interest: 'programming',
-    notes: 'مهتم بدورة جافاسكربت',
-    created_at: '2023-10-25T10:30:00Z',
-    status: 'new'
-  },
-  {
-    id: 2,
-    full_name: 'سارة خالد',
-    email: 'sara@example.com',
-    phone: '0559876543',
-    interest: 'languages',
-    notes: 'أرغب بتعلم اللغة الإنجليزية',
-    created_at: '2023-10-24T14:15:00Z',
-    status: 'read'
-  },
-  {
-    id: 3,
-    full_name: 'فهد العمري',
-    email: 'fahad@example.com',
-    phone: '0543210987',
-    interest: 'computer',
-    notes: 'استفسار عن دورة صيانة الحاسب',
-    created_at: '2023-10-23T09:00:00Z',
-    status: 'contacted'
-  },
-  {
-    id: 4,
-    full_name: 'منى علي',
-    email: 'mona@example.com',
-    phone: '0567890123',
-    interest: 'skills',
-    notes: 'هل توجد دورات مسائية؟',
-    created_at: '2023-10-22T16:45:00Z',
-    status: 'new'
-  },
-  {
-    id: 5,
-    full_name: 'خالد يوسف',
-    email: 'khaled@example.com',
-    phone: '0598765432',
-    interest: 'programming',
-    notes: 'أبحث عن دورة بايثون',
-    created_at: '2023-10-21T11:20:00Z',
-    status: 'read'
-  }
-];
 
 export const Dashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -134,21 +82,20 @@ export const Dashboard = () => {
 
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        // Map Supabase data to our Lead type, adding default status if missing
-        const mappedData = data.map((item: any) => ({
-          ...item,
-          status: item.status || 'new'
-        }));
-        setLeads(mappedData);
-      } else {
-        // If empty or no table yet, use mock data
-        setLeads(mockLeads);
-      }
+      if (data) {
+  const mappedData = data.map((item: any) => ({
+    ...item,
+    status: item.status || 'new'
+  }));
+  setLeads(mappedData);
+} else {
+  setLeads([]); // لا تستخدم أي بيانات افتراضية
+}
+
     } catch (error) {
       console.error('Error fetching leads:', error);
       // Fallback to mock data on error
-      setLeads(mockLeads);
+      setLeads();
     } finally {
       setLoading(false);
     }
